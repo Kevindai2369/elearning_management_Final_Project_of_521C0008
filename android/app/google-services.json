@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "550646316094",
+    "project_id": "elearnng-v2",
+    "storage_bucket": "elearnng-v2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:550646316094:android:aa3812d32adfb8cb93656f",
+        "android_client_info": {
+          "package_name": "com.example.elearningfinal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "550646316094-tl11jum9b50hd4oiasgakri42ci3a8d2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdmWLgpefnOL72mo4nR9zvnxuSr2HFOM8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "550646316094-tl11jum9b50hd4oiasgakri42ci3a8d2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "550646316094-2c1su1sqli8766df2fnk96pls4nf5gh3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.elearningfinal"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
