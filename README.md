@@ -17,70 +17,165 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Firebase setup (Firestore, Authentication, Storage)
 
-This project includes example service wrappers in `lib/services/` for:
+This project includes Firebase integration with **role-based system** (Student & Instructor):
 
-- Authentication: `lib/services/auth_service.dart`
-- Firestore database: `lib/services/firestore_service.dart`
-- Storage: `lib/services/storage_service.dart`
+- **User Model**: `lib/models/user_model.dart` (role selection)
+- **Authentication Service**: `lib/services/auth_service.dart`
+- **Firestore Service**: `lib/services/firestore_service.dart`
+- **Storage Service**: `lib/services/storage_service.dart`
 
-Follow these steps to configure Firebase for this project:
+### Role-Based Features
 
-1. Install FlutterFire CLI (if you haven't):
+#### Student (Học sinh)
+- ✅ Sign up and login
+- ✅ Browse enrolled courses
+- 🔄 Browse available courses & enroll
+- 🔄 View course materials (PDF, DOC)
+- 🔄 Take quizzes
+- 🔄 Submit assignments (files < 50MB: .rar, .zip)
+- 🔄 View grades and feedback
 
-	```powershell
-	dart pub global activate flutterfire_cli
-	```
+#### Instructor (Giảng viên)
+- ✅ Sign up and login
+- ✅ Create and manage courses
+- 🔄 Upload lecture notes (PDF, DOC < 50MB)
+- 🔄 Import student list (CSV file)
+- 🔄 Create quizzes
+- 🔄 Upload assignments with PDF/DOC
+- 🔄 Grade student submissions
+- 🔄 View course analytics
 
-2. Add Firebase dependencies (already added to `pubspec.yaml`):
+### Quick Start
 
-	- `firebase_core`
-	- `cloud_firestore`
-	- `firebase_auth`
-	- `firebase_storage`
+1. **Install dependencies**:
+   ```powershell
+   flutter pub get
+   ```
 
-	Then run:
+2. **Configure Firebase** (already done, but if needed again):
+   ```powershell
+   flutterfire configure
+   ```
 
-	```powershell
-	flutter pub get
-	```
+3. **Setup Firestore Security Rules** (DEV/TEST MODE):
+   - Go to Firebase Console → Firestore → Rules
+   - Replace with:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=**} {
+         allow read, write: if true;
+       }
+     }
+   }
+   ```
+   - Click "Publish"
 
-3. Configure Firebase for your project using FlutterFire CLI. From the project root run:
+4. **Add sample data to Firestore**:
+   - Go to Firebase Console → Firestore → Data
+   - Create collection: `courses`
+   - Add documents with fields: `name`, `instructor`, `description`, `colorHex`
+   - See `FIRESTORE_SETUP.md` for detailed instructions
 
-	```powershell
-	flutterfire configure
-	```
+5. **Run the app**:
+   ```powershell
+   flutter run -d chrome    # Web
+   flutter run -d android   # Android
+   flutter run -d windows   # Windows
+   ```
 
-	This will guide you to select your Firebase project and generate
-	`lib/firebase_options.dart` with the correct `FirebaseOptions` for each platform.
+### Features & Testing
 
-4. Android and iOS platform files
+**Authentication**:
+- ✅ Sign up with email/password
+- ✅ Sign in with email/password
+- ✅ Sign out
+- ✅ Error messages in Vietnamese
 
-	- Android: put the downloaded `google-services.json` in `android/app/`.
-	  Ensure `android/build.gradle` and `android/app/build.gradle` include the
-	  Google services plugin as documented by Firebase (the FlutterFire CLI
-	  automates most of this).
+### Features & Testing
 
-	- iOS: put the downloaded `GoogleService-Info.plist` in `ios/Runner/`.
+**Authentication**:
+- ✅ Sign up with email/password + role selection
+- ✅ Sign in with email/password
+- ✅ Role-based dashboard routing
+- ✅ Sign out
+- ✅ Error messages in Vietnamese
 
-5. Run the app:
+**Dashboard**:
+- ✅ StudentDashboard - view enrolled courses
+- ✅ InstructorDashboard - view created courses
+- ✅ User profile in Drawer
+- ✅ Logout functionality
 
-	```powershell
-	flutter run
-	```
+**Firestore Integration**:
+- ✅ Real-time course list (StreamBuilder)
+- ✅ Fetch courses based on role
+- ✅ Store user role in Firestore
+- ✅ Empty state handling
 
-Notes:
+**UI/Navigation**:
+- ✅ Login/SignUp tabs with role selection
+- ✅ Student and Instructor dashboards
+- ✅ User profile display in Drawer
+- ✅ Drawer navigation with user info
 
-- I added a small stub `lib/firebase_options.dart` that will throw a clear
-  error if you haven't generated the real file yet — run `flutterfire configure` to
-  generate it.
-- After configuration, `main()` will initialize Firebase at startup.
-- The services are minimal examples; adapt them to your app's error handling,
-  authentication flows, and security rules.
+For detailed role-based feature documentation, see `ROLE_BASED_SYSTEM.md`
 
-If you want, tôi có thể tiếp tục và: 
+For detailed testing guide, see `TEST_GUIDE.md`
 
-- Thêm ví dụ màn hình đăng nhập/đăng ký sử dụng `AuthService`.
-- Thêm ví dụ đọc/ghi tài liệu Firestore trong UI.
-- Thêm ví dụ upload file lên Storage (với chọn file từ thiết bị).
+### Project Structure
 
-Cho tôi biết bạn muốn mình làm tiếp phần nào nhé.
+```
+lib/
+├── main.dart                  # App entry point + screens (Login, CourseList, CourseDetail)
+├── firebase_options.dart      # Firebase config (generated by FlutterFire CLI)
+├── models/
+│   └── course.dart            # Course model with Firestore serialization
+└── services/
+    ├── auth_service.dart      # Firebase Auth wrapper
+    ├── firestore_service.dart # Firestore wrapper
+    └── storage_service.dart   # Firebase Storage wrapper
+```
+
+### Debugging
+
+- **Hot reload**: Ctrl+S or press 'r' in terminal
+- **Hot restart**: Press 'R' (Shift+R) in terminal
+- **View logs**: 
+  - Web: F12 → Console
+  - Android: `flutter logs`
+  
+### Common Issues & Fixes
+
+| Issue | Solution |
+|-------|----------|
+| "Permission denied" | Set Firestore rules to test mode (allow read/write: if true) |
+| "Email is badly formatted" | Email must contain `@` (e.g., test@example.com) |
+| "Operation timed out" | Check internet connection, restart app |
+| "No courses visible" | Add documents to `courses` collection in Firestore |
+
+### Next Steps (Future Enhancements)
+
+- [ ] File upload to Storage (avatar, documents)
+- [ ] Real-time messaging
+- [ ] Course creation/enrollment
+- [ ] Assignments & submissions
+- [ ] Push notifications
+
+### Files Added/Modified
+
+- `lib/main.dart` — Complete UI with role-based routing
+- `lib/models/user_model.dart` — **NEW** User model with role enum
+- `lib/models/course.dart` — Updated with instructor & student tracking
+- `lib/services/` — Enhanced with student/instructor-specific methods
+- `pubspec.yaml` — Firebase packages configured
+- `ROLE_BASED_SYSTEM.md` — **NEW** Complete role-based system documentation
+- `TEST_GUIDE.md` — Testing procedures for all features
+- `FIRESTORE_SETUP.md` — Firestore configuration guide
+
+### Learn More
+
+- [Firebase for Flutter](https://firebase.google.com/docs/flutter/setup)
+- [Cloud Firestore](https://firebase.google.com/docs/firestore)
+- [Firebase Authentication](https://firebase.google.com/docs/auth)
