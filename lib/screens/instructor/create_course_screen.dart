@@ -53,7 +53,11 @@ class _CreateCourseScreenState extends State<CreateCourseScreen> {
       final userData = await _authService.getUserData(userId);
       final instructorName = userData?['fullName'] ?? 'Unknown';
 
-      final colorHex = '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+      // Convert Color to hex string (RGB format)
+      final r = _selectedColor.red.toRadixString(16).padLeft(2, '0');
+      final g = _selectedColor.green.toRadixString(16).padLeft(2, '0');
+      final b = _selectedColor.blue.toRadixString(16).padLeft(2, '0');
+      final colorHex = '#$r$g$b';
 
       final course = Course(
         id: '',

@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/firestore_service.dart';
-import '../../services/storage_service.dart';
+import '../../services/storage_service_simple.dart';
 import '../../services/auth_service.dart';
 import '../../utils/file_handler.dart';
 import '../../models/material_model.dart';
@@ -19,10 +18,9 @@ class _UploadMaterialScreenState extends State<UploadMaterialScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _firestoreService = FirestoreService();
-  final _storageService = StorageService();
   final _authService = AuthService();
 
-  File? _selectedFile;
+  PickedFileData? _selectedFile;
   bool _isLoading = false;
 
   @override
@@ -55,9 +53,17 @@ class _UploadMaterialScreenState extends State<UploadMaterialScreen> {
     setState(() => _isLoading = true);
     try {
       final userId = _authService.currentUser?.uid ?? '';
-      final fileName = _selectedFile!.path.split(Platform.pathSeparator).last;
-      final storagePath = 'courses/${widget.courseId}/materials/$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
-      final fileUrl = await _storageService.uploadFile(storagePath, _selectedFile!);
+      final fileName = _selectedFile!.name;
+      
+      if (_selectedFile!.bytes == null) {
+        throw Exception('No file data available');
+      }
+      
+      final fileUrl = await SimpleStorageService().uploadMaterial(
+        widget.courseId,
+        fileName,
+        _selectedFile!.bytes!,
+      );
 
       final material = CourseMaterial(
         id: '',
@@ -66,7 +72,7 @@ class _UploadMaterialScreenState extends State<UploadMaterialScreen> {
         description: _descriptionController.text.trim(),
         fileUrl: fileUrl,
         fileName: fileName,
-        fileSize: _selectedFile!.lengthSync(),
+        fileSize: _selectedFile!.size,
         createdAt: DateTime.now(),
         createdBy: userId,
       );
@@ -106,7 +112,7 @@ class _UploadMaterialScreenState extends State<UploadMaterialScreen> {
                 const SizedBox(height: 8),
                 ElevatedButton(onPressed: _pickFile, child: const Text('Chọn File (PDF/DOC)')),
               ] else ...[
-                Text(_selectedFile!.path.split(Platform.pathSeparator).last, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(_selectedFile!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text('Size: ${FileHandler.getFileSizeInMB(_selectedFile!).toStringAsFixed(2)} MB'),
                 const SizedBox(height: 8),

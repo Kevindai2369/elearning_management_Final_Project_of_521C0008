@@ -3,6 +3,7 @@ import 'package:elearningfinal/models/course.dart';
 import 'package:elearningfinal/models/material_model.dart';
 import 'package:elearningfinal/models/assignment_model.dart';
 import 'package:elearningfinal/models/quiz_model.dart';
+import 'package:elearningfinal/models/comment_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -17,6 +18,25 @@ class FirestoreService {
   Stream<QuerySnapshot<Map<String, dynamic>>> streamCollection(
       String collection) {
     return _db.collection(collection).snapshots();
+  }
+
+  // Stream a single user document (for real-time profile updates)
+  Stream<Map<String, dynamic>?> getUserStream(String userId) {
+    return _db.collection('users').doc(userId).snapshots().map((doc) {
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        // Add cache-busting timestamp to avatar URL if it exists
+        if (data['avatarUrl'] != null && (data['avatarUrl'] as String).isNotEmpty) {
+          final avatarUrl = data['avatarUrl'] as String;
+          // Add timestamp as query parameter to bust cache
+          // Use & if URL already has query params, otherwise use ?
+          final separator = avatarUrl.contains('?') ? '&' : '?';
+          data['avatarUrl'] = '$avatarUrl${separator}v=${DateTime.now().millisecondsSinceEpoch}';
+        }
+        return data;
+      }
+      return null;
+    });
   }
 
   // Create or update a document
@@ -56,8 +76,14 @@ class FirestoreService {
   }
 
   /// Cập nhật khóa học
-  Future<void> updateCourse(String courseId, Course course) async {
-    await _db.collection('courses').doc(courseId).set(course.toMap());
+  Future<void> updateCourse(String courseId, dynamic courseData) async {
+    if (courseData is Course) {
+      await _db.collection('courses').doc(courseId).set(courseData.toMap());
+    } else if (courseData is Map<String, dynamic>) {
+      await _db.collection('courses').doc(courseId).update(courseData);
+    } else {
+      throw ArgumentError('courseData must be either Course or Map<String, dynamic>');
+    }
   }
 
   /// Xoá khóa học
@@ -77,13 +103,19 @@ class FirestoreService {
   }
 
   /// Lấy stream khóa học của một Student (khóa học mà student đã đăng ký)
-  Stream<List<Course>> getStudentCoursesStream(String studentId) {
+  /// Tìm theo cả UID và email
+  Stream<List<Course>> getStudentCoursesStream(String studentId, String studentEmail) {
     return _db
         .collection('courses')
-        .where('studentIds', arrayContains: studentId)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => Course.fromMap(doc.data(), doc.id)).toList();
+      // Filter courses that contain either studentId (UID) or studentEmail
+      return snapshot.docs
+          .map((doc) => Course.fromMap(doc.data(), doc.id))
+          .where((course) => 
+              course.studentIds.contains(studentId) || 
+              course.studentIds.contains(studentEmail))
+          .toList();
     });
   }
 
@@ -261,5 +293,152 @@ class FirestoreService {
     updates['responses.$studentId.score'] = score;
     if (feedback != null) updates['responses.$studentId.feedback'] = feedback;
     await _db.collection('courses').doc(courseId).collection('quizzes').doc(quizId).update(updates);
+  }
+
+  // --- Favorite Courses ---
+
+  /// Get favorite courses stream for a student
+  Stream<List<String>> getFavoriteCoursesStream(String studentId) {
+    return _db
+        .collection('users')
+        .doc(studentId)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        return List<String>.from(data['favoriteCourses'] ?? []);
+      }
+      return <String>[];
+    });
+  }
+
+  /// Toggle favorite course (add if not exists, remove if exists)
+  Future<void> toggleFavoriteCourse(String studentId, String courseId) async {
+    final userDoc = await _db.collection('users').doc(studentId).get();
+    
+    if (userDoc.exists && userDoc.data() != null) {
+      final data = userDoc.data()!;
+      final favorites = List<String>.from(data['favoriteCourses'] ?? []);
+      
+      if (favorites.contains(courseId)) {
+        // Remove from favorites
+        await _db.collection('users').doc(studentId).update({
+          'favoriteCourses': FieldValue.arrayRemove([courseId])
+        });
+      } else {
+        // Add to favorites
+        await _db.collection('users').doc(studentId).update({
+          'favoriteCourses': FieldValue.arrayUnion([courseId])
+        });
+      }
+    } else {
+      // Create user doc with favorite
+      await _db.collection('users').doc(studentId).set({
+        'favoriteCourses': [courseId]
+      }, SetOptions(merge: true));
+    }
+  }
+
+  /// Check if course is favorite
+  Future<bool> isFavoriteCourse(String studentId, String courseId) async {
+    final userDoc = await _db.collection('users').doc(studentId).get();
+    
+    if (userDoc.exists && userDoc.data() != null) {
+      final data = userDoc.data()!;
+      final favorites = List<String>.from(data['favoriteCourses'] ?? []);
+      return favorites.contains(courseId);
+    }
+    return false;
+  }
+
+  // --- Comments / Discussion ---
+
+  /// Get comments stream for a course
+  Stream<List<Comment>> getCourseCommentsStream(String courseId) {
+    return _db
+        .collection('courses')
+        .doc(courseId)
+        .collection('comments')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Comment.fromMap(doc.data(), doc.id))
+          .toList();
+    });
+  }
+
+  /// Add a comment to a course
+  Future<String> addComment(Comment comment) async {
+    final ref = await _db
+        .collection('courses')
+        .doc(comment.courseId)
+        .collection('comments')
+        .add(comment.toMap());
+    return ref.id;
+  }
+
+  /// Delete a comment (only by owner or instructor)
+  Future<void> deleteComment(String courseId, String commentId) async {
+    await _db
+        .collection('courses')
+        .doc(courseId)
+        .collection('comments')
+        .doc(commentId)
+        .delete();
+  }
+
+  /// Toggle like on a comment
+  Future<void> toggleCommentLike(String courseId, String commentId, String userId) async {
+    final commentRef = _db
+        .collection('courses')
+        .doc(courseId)
+        .collection('comments')
+        .doc(commentId);
+
+    final commentDoc = await commentRef.get();
+    if (commentDoc.exists && commentDoc.data() != null) {
+      final data = commentDoc.data()!;
+      final likes = List<String>.from(data['likes'] ?? []);
+
+      if (likes.contains(userId)) {
+        // Unlike
+        await commentRef.update({
+          'likes': FieldValue.arrayRemove([userId])
+        });
+      } else {
+        // Like
+        await commentRef.update({
+          'likes': FieldValue.arrayUnion([userId])
+        });
+      }
+    }
+  }
+
+  /// Get replies for a comment
+  Stream<List<Comment>> getCommentRepliesStream(String courseId, String commentId) {
+    return _db
+        .collection('courses')
+        .doc(courseId)
+        .collection('comments')
+        .where('replyToId', isEqualTo: commentId)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => Comment.fromMap(doc.data(), doc.id))
+          .toList();
+    });
+  }
+
+  /// Get comment count for a course
+  Future<int> getCourseCommentCount(String courseId) async {
+    final snapshot = await _db
+        .collection('courses')
+        .doc(courseId)
+        .collection('comments')
+        .where('replyToId', isEqualTo: null)
+        .get();
+    return snapshot.docs.length;
   }
 }

@@ -128,6 +128,8 @@ class Quiz {
   }
 
   Map<String, dynamic> toMap() {
+    // Note: This method is used for creating/updating quiz structure
+    // It does NOT include 'responses' field which is managed separately in Firestore
     return {
       'courseId': courseId,
       'title': title,

@@ -64,4 +64,27 @@ class AuthService {
   Stream<Map<String, dynamic>?> getUserDataStream(String uid) {
     return _firestore.collection('users').doc(uid).snapshots().map((doc) => doc.data());
   }
+
+  // Tìm user theo email
+  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      
+      if (querySnapshot.docs.isNotEmpty) {
+        final doc = querySnapshot.docs.first;
+        return {
+          'uid': doc.id,
+          ...doc.data(),
+        };
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting user by email: $e');
+      return null;
+    }
+  }
 }

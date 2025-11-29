@@ -96,15 +96,15 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
 
       await _firestore.submitQuizResponse(widget.courseId, widget.quiz.id, response);
 
-      if (mounted) {
-        // show results screen with per-question feedback
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => QuizResultScreen(quiz: widget.quiz, answers: answersToStore, score: score)),
-        );
-      }
+      if (!mounted) return;
+      // show results screen with per-question feedback
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => QuizResultScreen(quiz: widget.quiz, answers: answersToStore, score: score)),
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi khi nộp quiz: $e')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi khi nộp quiz: $e')));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -133,15 +133,42 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                         const SizedBox(height: 8),
                         if (q.type == 'multiple_choice') ...[
                           for (var optIndex = 0; optIndex < q.options.length; optIndex++)
-                            RadioListTile<int>(
-                              value: optIndex,
-                              groupValue: _selectedAnswers[index] as int?,
-                              title: Text(q.options[optIndex]),
-                              onChanged: (v) {
+                            InkWell(
+                              onTap: () {
                                 setState(() {
-                                  _selectedAnswers[index] = v ?? -1;
+                                  _selectedAnswers[index] = optIndex;
                                 });
                               },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _selectedAnswers[index] == optIndex
+                                        ? Colors.blue
+                                        : Colors.grey.shade300,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: _selectedAnswers[index] == optIndex
+                                      ? Colors.blue.shade50
+                                      : null,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Radio<int>(
+                                      value: optIndex,
+                                      groupValue: _selectedAnswers[index] as int?,
+                                      onChanged: (v) {
+                                        setState(() {
+                                          _selectedAnswers[index] = v ?? -1;
+                                        });
+                                      },
+                                    ),
+                                    Expanded(child: Text(q.options[optIndex])),
+                                  ],
+                                ),
+                              ),
                             ),
                         ] else ...[
                           TextField(

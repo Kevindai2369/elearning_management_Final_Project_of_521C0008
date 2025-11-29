@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
+import '../../services/auth_service.dart';
 import '../../models/quiz_model.dart';
 
 class QuizResponsesScreen extends StatefulWidget {
@@ -14,27 +16,61 @@ class QuizResponsesScreen extends StatefulWidget {
 
 class _QuizResponsesScreenState extends State<QuizResponsesScreen> {
   final _firestore = FirestoreService();
+  final _authService = AuthService();
+  final Map<String, String> _studentNames = {}; // Cache student names
+
+  Future<String> _getStudentName(String studentId) async {
+    if (_studentNames.containsKey(studentId)) {
+      return _studentNames[studentId]!;
+    }
+    
+    final userData = await _authService.getUserData(studentId);
+    final name = userData?['fullName'] ?? studentId;
+    _studentNames[studentId] = name;
+    return name;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Responses: ${widget.quiz.title}')),
-      body: StreamBuilder<Quiz?>(
-        stream: _firestore.getQuizStream(widget.courseId, widget.quiz.id),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('courses')
+            .doc(widget.courseId)
+            .collection('quizzes')
+            .doc(widget.quiz.id)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return Center(child: Text('Lỗi: ${snapshot.error}'));
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final quiz = snapshot.data!;
+          
+          final doc = snapshot.data!;
+          if (!doc.exists) {
+            return const Center(child: Text('Quiz không tồn tại'));
+          }
 
-          // responses stored as map keyed by studentId
-          final raw = quiz.toMap();
-          final responsesObj = raw['responses'];
+          // Get raw data from Firestore document
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) {
+            return const Center(child: Text('Không có dữ liệu'));
+          }
+
+          final responsesObj = data['responses'];
+
+          // Debug: print raw data
+          debugPrint('Quiz responses raw data: $responsesObj');
+          debugPrint('Quiz responses type: ${responsesObj.runtimeType}');
 
           if (responsesObj == null || responsesObj is! Map) {
             return const Center(child: Text('Chưa có phản hồi')); 
           }
 
           final entries = Map<String, dynamic>.from(responsesObj).entries.toList();
+          
+          if (entries.isEmpty) {
+            return const Center(child: Text('Chưa có phản hồi'));
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(12),
@@ -58,7 +94,13 @@ class _QuizResponsesScreenState extends State<QuizResponsesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Student: $studentId', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      FutureBuilder<String>(
+                        future: _getStudentName(studentId),
+                        builder: (context, snapshot) {
+                          final name = snapshot.data ?? studentId;
+                          return Text('Sinh viên: $name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16));
+                        },
+                      ),
                       const SizedBox(height: 6),
                       Text('Submitted: ${submittedAt?.toLocal().toString() ?? 'Unknown'}'),
                       const SizedBox(height: 6),

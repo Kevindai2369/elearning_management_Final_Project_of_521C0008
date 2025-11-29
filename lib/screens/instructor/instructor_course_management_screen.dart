@@ -5,6 +5,10 @@ import '../../models/assignment_model.dart';
 import '../../models/quiz_model.dart';
 import 'submissions_screen.dart';
 import 'quiz_responses_screen.dart';
+import 'create_quiz_screen.dart';
+import 'create_assignment_screen.dart';
+import 'upload_material_screen.dart';
+import 'manage_students_screen.dart';
 
 class InstructorCourseManagementScreen extends StatelessWidget {
   final Course course;
@@ -15,14 +19,94 @@ class InstructorCourseManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
   final firestore = FirestoreService();
     return Scaffold(
-      appBar: AppBar(title: Text('Quản lý ${course.name}')),
+      appBar: AppBar(
+        title: Text('Quản lý ${course.name}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.school),
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                '/course/${course.id}',
+                arguments: course,
+              );
+            },
+            tooltip: 'Xem Khóa Học',
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showAddMenu(context);
+        },
+        child: const Icon(Icons.add),
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Students Section
             Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text('Quizzes', style: Theme.of(context).textTheme.titleLarge),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Sinh Viên (${course.studentIds.length})', 
+                    style: Theme.of(context).textTheme.titleLarge),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ManageStudentsScreen(course: course),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.people),
+                    label: const Text('Quản Lý'),
+                  ),
+                ],
+              ),
+            ),
+            Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              child: ListTile(
+                leading: const Icon(Icons.people_outline),
+                title: Text('${course.studentIds.length} sinh viên'),
+                subtitle: const Text('Xem danh sách và quản lý sinh viên'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ManageStudentsScreen(course: course),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Quizzes Section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Quizzes', style: Theme.of(context).textTheme.titleLarge),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreateQuizScreen(courseId: course.id),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tạo Quiz'),
+                  ),
+                ],
+              ),
             ),
             SizedBox(
               height: 220,
@@ -68,9 +152,27 @@ class InstructorCourseManagementScreen extends StatelessWidget {
               ),
             ),
 
+            // Assignments Section
             Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text('Assignments', style: Theme.of(context).textTheme.titleLarge),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Assignments', style: Theme.of(context).textTheme.titleLarge),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreateAssignmentScreen(courseId: course.id),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tạo Bài Tập'),
+                  ),
+                ],
+              ),
             ),
 
             StreamBuilder<List<Assignment>>(
@@ -100,6 +202,83 @@ class InstructorCourseManagementScreen extends StatelessWidget {
                       ),
                     );
                   },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.quiz),
+              title: const Text('Tạo Quiz'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateQuizScreen(courseId: course.id),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment),
+              title: const Text('Tạo Bài Tập'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateAssignmentScreen(courseId: course.id),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file),
+              title: const Text('Upload Tài Liệu'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UploadMaterialScreen(courseId: course.id),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Quản Lý Sinh Viên'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageStudentsScreen(course: course),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file),
+              title: const Text('Import Học Sinh (CSV)'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(
+                  context,
+                  '/import-csv',
+                  arguments: {'courseId': course.id},
                 );
               },
             ),

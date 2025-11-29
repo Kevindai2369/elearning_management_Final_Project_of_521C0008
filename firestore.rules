@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Helper function to check if user is instructor
+    function isInstructor() {
+      return isSignedIn() && getUserData().role == 'instructor';
+    }
+    
+    // Helper function to check if user is student
+    function isStudent() {
+      return isSignedIn() && getUserData().role == 'student';
+    }
+    
+    // Helper function to check if user is enrolled in course (by UID or email)
+    function isEnrolledInCourse(courseId) {
+      let courseData = get(/databases/$(database)/documents/courses/$(courseId)).data;
+      let studentIds = courseData.studentIds;
+      // Check if user's UID or email is in studentIds array
+      return request.auth.uid in studentIds || request.auth.token.email in studentIds;
+    }
+    
+    // Helper function to check if user is course instructor
+    function isCourseInstructor(courseId) {
+      let courseData = get(/databases/$(database)/documents/courses/$(courseId)).data;
+      return request.auth.uid == courseData.instructorId;
+    }
+    
+    // Helper function to check if user can access course (enrolled or instructor)
+    function canAccessCourse(courseId) {
+      return isEnrolledInCourse(courseId) || isCourseInstructor(courseId);
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isSignedIn();
+      
+      // Users can only write their own profile
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Courses collection
+    match /courses/{courseId} {
+      // Anyone authenticated can read courses
+      allow read: if isSignedIn();
+      
+      // Only instructors can create courses
+      allow create: if isInstructor() && 
+                       request.resource.data.instructorId == request.auth.uid;
+      
+      // Only the course instructor can update/delete their course
+      allow update, delete: if isSignedIn() && 
+                               resource.data.instructorId == request.auth.uid;
+
+      // Materials subcollection
+      match /materials/{materialId} {
+        // Students enrolled in course and instructor can read
+        allow read: if isSignedIn() && canAccessCourse(courseId);
+        
+        // Only course instructor can write materials
+        allow write: if isSignedIn() && isCourseInstructor(courseId);
+      }
+
+      // Assignments subcollection
+      match /assignments/{assignmentId} {
+        // Students enrolled and instructor can read
+        allow read: if isSignedIn() && canAccessCourse(courseId);
+        
+        // Instructor can create/delete assignments
+        allow create, delete: if isSignedIn() && isCourseInstructor(courseId);
+        
+        // Instructor can update, or students can update to submit (add to submissions map)
+        allow update: if isSignedIn() && (
+          isCourseInstructor(courseId) ||
+          (canAccessCourse(courseId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submissions']))
+        );
+      }
+
+      // Quizzes subcollection
+      match /quizzes/{quizId} {
+        // Students enrolled and instructor can read
+        allow read: if isSignedIn() && canAccessCourse(courseId);
+        
+        // Instructor can create/delete quizzes
+        allow create, delete: if isSignedIn() && isCourseInstructor(courseId);
+        
+        // Instructor can update, or students can update to submit responses
+        allow update: if isSignedIn() && (
+          isCourseInstructor(courseId) ||
+          (canAccessCourse(courseId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['responses']))
+        );
+      }
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        // Students enrolled and instructor can read comments
+        allow read: if isSignedIn() && canAccessCourse(courseId);
+        
+        // Students enrolled and instructor can create comments
+        allow create: if isSignedIn() && 
+                         canAccessCourse(courseId) && 
+                         request.resource.data.userId == request.auth.uid;
+        
+        // Users can update comments (for likes) if they have access to course
+        allow update: if isSignedIn() && canAccessCourse(courseId);
+        
+        // Users can delete their own comments, or instructor can delete any comment
+        allow delete: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          isCourseInstructor(courseId)
+        );
+      }
+    }
+  }
+}
