@@ -152,8 +152,9 @@ dependencies:
 **Deployed on Firebase Hosting:** [https://elearnng-v2.web.app](https://elearnng-v2.web.app)
 
 ## 📸 Screenshots
+<img width="1899" height="847" alt="image" src="https://github.com/user-attachments/assets/8ad52e01-0c44-49fb-94bb-3ce0962dd3cd" />
 
-*(Add screenshots here)*
+
 
 ## 🤝 Contributing
 
@@ -161,15 +162,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the TDTU License.
 
 ## 👥 Team
 
-*(Add team member names here)*
+Dai Tuan Kiet - 521C0008 from Ton Duc Thang University
 
 ## 📞 Contact
 
-For questions or support, please contact: *(Add contact info)*
+For questions or support, please contact: *daituankiet69@gmail.com*
 
 ---
 
