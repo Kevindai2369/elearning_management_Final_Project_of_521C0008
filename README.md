@@ -165,11 +165,11 @@ This project is licensed under the MIT License.
 
 ## 👥 Team
 
-*(Add team member names here)*
+Dai Tuan Kiet - 521C0008 from Ton Duc Thang University
 
 ## 📞 Contact
 
-For questions or support, please contact: *(Add contact info)*
+For questions or support, please contact: *daituankiet69@gmail.com*
 
 ---
 
