@@ -24,6 +24,8 @@ import 'widgets/course/course_card.dart';
 import 'screens/auth/polished_login_screen.dart';
 import 'screens/student/student_analytics_screen.dart';
 import 'screens/instructor/generate_test_data_screen.dart';
+import 'screens/instructor/test_notifications_screen.dart';
+import 'widgets/common/notification_badge.dart';
 
 // --- MAIN ENTRY POINT ---
 Future<void> main() async {
@@ -154,6 +156,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       appBar: AppBar(
         title: const Text('Khóa Học Của Tôi'),
         actions: [
+          const NotificationBadge(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
@@ -320,6 +323,7 @@ class _InstructorDashboardState extends State<InstructorDashboard> {
       appBar: AppBar(
         title: const Text('Khóa Học Của Tôi'),
         actions: [
+          const NotificationBadge(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
@@ -442,6 +446,20 @@ class _InstructorDashboardState extends State<InstructorDashboard> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => const GenerateTestDataScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_active, color: Colors.purple),
+                title: const Text('Test Notifications'),
+                subtitle: const Text('Gửi thông báo test', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TestNotificationsScreen(),
                     ),
                   );
                 },

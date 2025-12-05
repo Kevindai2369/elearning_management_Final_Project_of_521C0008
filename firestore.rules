@@ -235,5 +235,20 @@ service cloud.firestore {
       // Instructors can create/update/delete materials
       allow write: if isInstructor();
     }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Anyone authenticated can create notifications (for system notifications)
+      allow create: if isSignedIn();
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own notifications
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
   }
 }
