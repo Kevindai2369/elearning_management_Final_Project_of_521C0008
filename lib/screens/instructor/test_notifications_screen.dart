@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
-import '../../models/notification_model.dart';
 import '../../widgets/common/app_snackbar.dart';
 
 class TestNotificationsScreen extends StatefulWidget {
@@ -16,7 +15,7 @@ class TestNotificationsScreen extends StatefulWidget {
 class _TestNotificationsScreenState extends State<TestNotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
 
   Future<void> _sendTestNotifications() async {
@@ -29,7 +28,7 @@ class _TestNotificationsScreenState extends State<TestNotificationsScreen> {
       }
 
       // Get first course
-      final coursesSnapshot = await _firestoreService.firestore
+      final coursesSnapshot = await _firestore
           .collection('courses')
           .where('instructorId', isEqualTo: userId)
           .limit(1)
