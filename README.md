@@ -152,6 +152,7 @@ dependencies:
 **Deployed on Firebase Hosting:** [https://elearnng-v2.web.app](https://elearnng-v2.web.app)
 
 ## 📸 Screenshots
+<img width="1899" height="847" alt="image" src="https://github.com/user-attachments/assets/8ad52e01-0c44-49fb-94bb-3ce0962dd3cd" />
 
 
 
