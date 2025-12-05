@@ -153,7 +153,7 @@ dependencies:
 
 ## 📸 Screenshots
 
-*(Add screenshots here)*
+
 
 ## 🤝 Contributing
 
@@ -161,7 +161,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the TDTU License.
 
 ## 👥 Team
 
