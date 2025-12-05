@@ -9,12 +9,18 @@ class NotificationService {
     return _firestore
         .collection('notifications')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => NotificationModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+      final notifications = snapshot.docs
+          .map((doc) => NotificationModel.fromFirestore(doc))
+          .toList();
+      
+      // Sort by createdAt on client side (no index needed)
+      notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      return notifications;
+    });
   }
 
   // Get unread count
