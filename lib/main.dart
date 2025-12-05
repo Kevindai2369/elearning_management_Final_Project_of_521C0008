@@ -22,6 +22,7 @@ import 'widgets/common/app_snackbar.dart';
 import 'widgets/common/app_drawer_header.dart';
 import 'widgets/course/course_card.dart';
 import 'screens/auth/polished_login_screen.dart';
+import 'screens/student/student_analytics_screen.dart';
 
 // --- MAIN ENTRY POINT ---
 Future<void> main() async {
@@ -252,6 +253,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/favorite-courses');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.analytics),
+                title: const Text('Thống Kê Học Tập'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StudentAnalyticsScreen(),
+                    ),
+                  );
                 },
               ),
               const Divider(),

@@ -9,6 +9,7 @@ import 'create_quiz_screen.dart';
 import 'create_assignment_screen.dart';
 import 'upload_material_screen.dart';
 import 'manage_students_screen.dart';
+import 'course_analytics_screen.dart';
 
 class InstructorCourseManagementScreen extends StatelessWidget {
   final Course course;
@@ -22,6 +23,21 @@ class InstructorCourseManagementScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('Quản lý ${course.name}'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CourseAnalyticsScreen(
+                    courseId: course.id,
+                    courseName: course.name,
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Thống Kê',
+          ),
           IconButton(
             icon: const Icon(Icons.school),
             onPressed: () {
