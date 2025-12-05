@@ -381,7 +381,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Học sinh: 25'),
+                  Text('Học sinh: ${course.studentIds.length}'),
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pushNamed('/course/${course.id}', arguments: course);

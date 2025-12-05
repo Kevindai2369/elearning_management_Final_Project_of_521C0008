@@ -41,9 +41,19 @@ service cloud.firestore {
       return isEnrolledInCourse(courseId) || isCourseInstructor(courseId);
     }
     
+    // Helper function to check if user is enrolled student (not instructor)
+    function isEnrolledStudent(courseId) {
+      return isStudent() && isEnrolledInCourse(courseId);
+    }
+    
+    // Helper function to check if only specific fields are being updated
+    function onlyUpdatingFields(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+    
     // Users collection
     match /users/{userId} {
-      // Anyone authenticated can read user profiles
+      // Anyone authenticated can read user profiles (for displaying names, avatars, etc.)
       allow read: if isSignedIn();
       
       // Users can only write their own profile
@@ -52,16 +62,24 @@ service cloud.firestore {
 
     // Courses collection
     match /courses/{courseId} {
-      // Anyone authenticated can read courses
+      // Anyone authenticated can read courses (for browsing)
       allow read: if isSignedIn();
       
       // Only instructors can create courses
       allow create: if isInstructor() && 
                        request.resource.data.instructorId == request.auth.uid;
       
-      // Only the course instructor can update/delete their course
-      allow update, delete: if isSignedIn() && 
-                               resource.data.instructorId == request.auth.uid;
+      // Course instructor can update their course
+      // Allow updating: name, description, studentIds, and other course metadata
+      // Prevent changing: instructorId (ownership transfer not allowed)
+      allow update: if isSignedIn() && 
+                       isCourseInstructor(courseId) &&
+                       // Ensure instructorId is not changed
+                       request.resource.data.instructorId == resource.data.instructorId;
+      
+      // Only the course instructor can delete their course
+      allow delete: if isSignedIn() && 
+                       resource.data.instructorId == request.auth.uid;
 
       // Materials subcollection
       match /materials/{materialId} {
@@ -80,10 +98,20 @@ service cloud.firestore {
         // Instructor can create/delete assignments
         allow create, delete: if isSignedIn() && isCourseInstructor(courseId);
         
-        // Instructor can update, or students can update to submit (add to submissions map)
+        // Update rules:
+        // - Instructor can update anything (for grading, editing assignment)
+        // - Students can ONLY update submissions field to submit their work
         allow update: if isSignedIn() && (
+          // Instructor can update anything
           isCourseInstructor(courseId) ||
-          (canAccessCourse(courseId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submissions']))
+          // Student can only update submissions field with their own studentId
+          (
+            isEnrolledStudent(courseId) && 
+            onlyUpdatingFields(['submissions']) &&
+            // Ensure student is only adding/updating their own submission
+            request.resource.data.submissions.keys().hasAny([request.auth.uid]) &&
+            request.resource.data.submissions[request.auth.uid].studentId == request.auth.uid
+          )
         );
       }
 
@@ -95,10 +123,20 @@ service cloud.firestore {
         // Instructor can create/delete quizzes
         allow create, delete: if isSignedIn() && isCourseInstructor(courseId);
         
-        // Instructor can update, or students can update to submit responses
+        // Update rules:
+        // - Instructor can update anything (for grading, editing quiz)
+        // - Students can ONLY update responses field to submit their answers
         allow update: if isSignedIn() && (
+          // Instructor can update anything
           isCourseInstructor(courseId) ||
-          (canAccessCourse(courseId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['responses']))
+          // Student can only update responses field with their own studentId
+          (
+            isEnrolledStudent(courseId) && 
+            onlyUpdatingFields(['responses']) &&
+            // Ensure student is only adding/updating their own response
+            request.resource.data.responses.keys().hasAny([request.auth.uid]) &&
+            request.resource.data.responses[request.auth.uid].studentId == request.auth.uid
+          )
         );
       }
 
