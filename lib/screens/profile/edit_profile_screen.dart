@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import '../../services/auth_service.dart';
-import '../../services/storage_service_simple.dart';
+import '../../services/storage_service.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/file_handler_simple.dart';
 import 'package:file_picker/file_picker.dart';
@@ -15,7 +15,7 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _authService = AuthService();
-  final _storageService = SimpleStorageService();
+  final _storageService = StorageService();
   final _firestoreService = FirestoreService();
   final _fullNameController = TextEditingController();
   
@@ -128,8 +128,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Upload to Firebase Storage
       debugPrint('Calling uploadAvatar...');
       final downloadUrl = await _storageService.uploadAvatar(
-        userId,
-        _selectedImageBytes!,
+        userId: userId,
+        imageBytes: _selectedImageBytes!,
       );
       debugPrint('uploadAvatar returned: $downloadUrl');
       

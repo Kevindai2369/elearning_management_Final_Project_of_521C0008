@@ -54,9 +54,9 @@ class _CreateCourseScreenState extends State<CreateCourseScreen> {
       final instructorName = userData?['fullName'] ?? 'Unknown';
 
       // Convert Color to hex string (RGB format)
-      final r = _selectedColor.red.toRadixString(16).padLeft(2, '0');
-      final g = _selectedColor.green.toRadixString(16).padLeft(2, '0');
-      final b = _selectedColor.blue.toRadixString(16).padLeft(2, '0');
+      final r = ((_selectedColor.r * 255.0).round() & 0xff).toRadixString(16).padLeft(2, '0');
+      final g = ((_selectedColor.g * 255.0).round() & 0xff).toRadixString(16).padLeft(2, '0');
+      final b = ((_selectedColor.b * 255.0).round() & 0xff).toRadixString(16).padLeft(2, '0');
       final colorHex = '#$r$g$b';
 
       final course = Course(

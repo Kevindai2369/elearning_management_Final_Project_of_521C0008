@@ -439,15 +439,22 @@ class _QuestionCardState extends State<_QuestionCard> {
                     ),
                     child: Row(
                       children: [
-                        Radio<int>(
-                          value: i,
-                          groupValue: qd.correctAnswer,
-                          onChanged: (value) {
+                        InkWell(
+                          onTap: () {
                             setState(() {
-                              qd.correctAnswer = value ?? 0;
+                              qd.correctAnswer = i;
                             });
                           },
+                          child: Icon(
+                            qd.correctAnswer == i
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: qd.correctAnswer == i
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: TextFormField(
                             controller: qd.optionControllers[i],

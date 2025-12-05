@@ -3,60 +3,49 @@ service firebase.storage {
   match /b/{bucket}/o {
     
     // Helper function to check if user is authenticated
-    function isSignedIn() {
+    function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Helper function to check if file is an image
-    function isImage() {
-      return request.resource.contentType.matches('image/.*');
+    // Helper function to check if user is instructor
+    function isInstructor() {
+      return isAuthenticated() && 
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'instructor';
     }
     
-    // Helper function to check file size (max 5MB for images, 50MB for documents)
-    function isValidSize() {
-      return request.resource.size < 5 * 1024 * 1024 && isImage() ||
-             request.resource.size < 50 * 1024 * 1024;
+    // Helper function to check if user is student
+    function isStudent() {
+      return isAuthenticated() && 
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'student';
     }
     
-    // Avatars - users can upload/update their own avatar
-    match /avatars/{userId}/{fileName} {
-      // Users can read any avatar
-      allow read: if isSignedIn();
-      
-      // Users can only write their own avatar
-      allow write: if isSignedIn() && 
-                      request.auth.uid == userId && 
-                      isImage() && 
-                      request.resource.size < 5 * 1024 * 1024; // Max 5MB
-      
-      // Users can delete their own avatar
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+    // Avatars - Users can read all, but only write their own
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Course materials - only instructor can upload
-    match /courses/{courseId}/materials/{fileName} {
-      // Anyone authenticated can read materials
-      allow read: if isSignedIn();
-      
-      // Only course instructor can write materials
-      allow write: if isSignedIn() && isValidSize();
-      
-      // Only course instructor can delete materials
-      allow delete: if isSignedIn();
+    // Course materials - Only instructors can upload, all authenticated users can read
+    match /courses/{courseId}/materials/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isInstructor();
     }
     
-    // Assignment submissions - students can upload their submissions
-    match /courses/{courseId}/assignments/{assignmentId}/submissions/{studentId}/{fileName} {
-      // Instructor and student owner can read
-      allow read: if isSignedIn();
-      
-      // Only the student can upload their submission
-      allow write: if isSignedIn() && 
-                      request.auth.uid == studentId && 
-                      isValidSize();
-      
-      // Student and instructor can delete
-      allow delete: if isSignedIn() && request.auth.uid == studentId;
+    // Assignment files - Only instructors can upload assignment files
+    match /courses/{courseId}/assignments/{assignmentId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isInstructor();
+    }
+    
+    // Assignment submissions - Only students can upload their own submissions
+    match /courses/{courseId}/assignments/{assignmentId}/submissions/{studentId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isStudent() && request.auth.uid == studentId;
+    }
+    
+    // Default - deny all
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

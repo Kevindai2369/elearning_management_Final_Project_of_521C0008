@@ -154,19 +154,26 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
                                       ? Colors.blue.shade50
                                       : null,
                                 ),
-                                child: Row(
-                                  children: [
-                                    Radio<int>(
-                                      value: optIndex,
-                                      groupValue: _selectedAnswers[index] as int?,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          _selectedAnswers[index] = v ?? -1;
-                                        });
-                                      },
-                                    ),
-                                    Expanded(child: Text(q.options[optIndex])),
-                                  ],
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedAnswers[index] = optIndex;
+                                    });
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _selectedAnswers[index] == optIndex
+                                            ? Icons.radio_button_checked
+                                            : Icons.radio_button_unchecked,
+                                        color: _selectedAnswers[index] == optIndex
+                                            ? Colors.blue
+                                            : Colors.grey,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(q.options[optIndex])),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

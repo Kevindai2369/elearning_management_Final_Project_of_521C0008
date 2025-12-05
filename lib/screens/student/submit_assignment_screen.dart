@@ -3,7 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/assignment_model.dart';
 import '../../services/firestore_service.dart';
-import '../../services/storage_service_simple.dart';
+import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/file_handler.dart';
 
@@ -158,12 +158,12 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
       }
 
       // Upload file to Firebase Storage
-      final fileUrl = await SimpleStorageService().uploadSubmission(
-        widget.courseId,
-        widget.assignment.id,
-        userId,
-        fileName,
-        _selectedFile!.bytes!,
+      final fileUrl = await StorageService().uploadAssignmentSubmission(
+        courseId: widget.courseId,
+        assignmentId: widget.assignment.id,
+        studentId: userId,
+        fileBytes: _selectedFile!.bytes!,
+        fileName: fileName,
       );
 
       // Create submission data

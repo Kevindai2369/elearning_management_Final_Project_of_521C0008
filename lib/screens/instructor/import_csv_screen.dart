@@ -302,7 +302,7 @@ class _ImportCSVScreenState extends State<ImportCSVScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: (student['statusColor'] as Color).withOpacity(0.2),
+                              backgroundColor: (student['statusColor'] as Color).withValues(alpha: 0.2),
                               child: Icon(
                                 student['status'] == 'registered' 
                                     ? Icons.check_circle 

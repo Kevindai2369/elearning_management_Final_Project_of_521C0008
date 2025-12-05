@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../../services/firestore_service.dart';
-import '../../services/storage_service_simple.dart';
+import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/file_handler.dart';
 import '../../models/material_model.dart';
@@ -43,27 +44,65 @@ class _UploadMaterialScreenState extends State<UploadMaterialScreen> {
 
   Future<void> _uploadMaterial() async {
     if (_titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tiêu đề')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập tiêu đề')),
+      );
       return;
     }
     if (_selectedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn file')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn file')),
+      );
       return;
     }
+    
     setState(() => _isLoading = true);
+    
     try {
-      final userId = _authService.currentUser?.uid ?? '';
-      final fileName = _selectedFile!.name;
+      debugPrint('=== UPLOAD MATERIAL START ===');
       
-      if (_selectedFile!.bytes == null) {
-        throw Exception('No file data available');
+      // Check authentication
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) {
+        throw Exception('Bạn chưa đăng nhập. Vui lòng đăng nhập lại.');
       }
       
-      final fileUrl = await SimpleStorageService().uploadMaterial(
-        widget.courseId,
-        fileName,
-        _selectedFile!.bytes!,
+      final userId = currentUser.uid;
+      debugPrint('User ID: $userId');
+      debugPrint('User email: ${currentUser.email}');
+      debugPrint('Course ID: ${widget.courseId}');
+      
+      final fileName = _selectedFile!.name;
+      debugPrint('File name: $fileName');
+      debugPrint('File size: ${_selectedFile!.size}');
+      
+      if (_selectedFile!.bytes == null) {
+        throw Exception('Không thể đọc dữ liệu file. Vui lòng thử lại.');
+      }
+      
+      debugPrint('File bytes available: ${_selectedFile!.bytes!.length}');
+      
+      // Show uploading message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đang upload file...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
+      // Add timestamp to filename like assignment does
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileNameWithTimestamp = '${timestamp}_$fileName';
+      
+      debugPrint('Calling uploadMaterial...');
+      final fileUrl = await StorageService().uploadCourseMaterial(
+        courseId: widget.courseId,
+        fileName: fileNameWithTimestamp,
+        fileBytes: _selectedFile!.bytes!,
       );
+      debugPrint('Upload successful, URL: $fileUrl');
 
       final material = CourseMaterial(
         id: '',
@@ -77,16 +116,67 @@ class _UploadMaterialScreenState extends State<UploadMaterialScreen> {
         createdBy: userId,
       );
 
+      debugPrint('Saving to Firestore...');
       await _firestoreService.addMaterial(widget.courseId, material.toMap());
+      debugPrint('Saved to Firestore successfully');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload thành công')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Upload thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pop(context);
       }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      debugPrint('=== UPLOAD MATERIAL SUCCESS ===');
+    } on FirebaseException catch (e) {
+      debugPrint('=== UPLOAD MATERIAL FIREBASE ERROR ===');
+      debugPrint('Code: ${e.code}');
+      debugPrint('Message: ${e.message}');
+      debugPrint('Plugin: ${e.plugin}');
+      
+      String errorMessage = 'Lỗi Firebase: ';
+      if (e.code == 'storage/unauthorized') {
+        errorMessage += 'Bạn không có quyền upload. Vui lòng kiểm tra Firebase Storage Rules.';
+      } else if (e.code == 'storage/canceled') {
+        errorMessage += 'Upload bị hủy.';
+      } else if (e.code == 'storage/unknown') {
+        errorMessage += 'Lỗi không xác định. Vui lòng kiểm tra:\n'
+            '1. Firebase Storage đã được enable\n'
+            '2. Storage Rules đã được cấu hình\n'
+            '3. Kết nối internet';
+      } else {
+        errorMessage += '${e.message}';
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('=== UPLOAD MATERIAL ERROR ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

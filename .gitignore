@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Documentation and notes (exclude from git)
+*.md
+!README.md
+*.docx
+*.bat

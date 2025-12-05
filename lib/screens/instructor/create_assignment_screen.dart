@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import '../../services/firestore_service.dart';
-import '../../services/storage_service_simple.dart';
+import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
@@ -137,10 +137,10 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
         throw Exception('No file data available');
       }
       
-      final fileUrl = await SimpleStorageService().uploadMaterial(
-        widget.courseId,
-        '${timestamp}_$fileName',
-        _selectedFile!.bytes!,
+      final fileUrl = await StorageService().uploadCourseMaterial(
+        courseId: widget.courseId,
+        fileName: '${timestamp}_$fileName',
+        fileBytes: _selectedFile!.bytes!,
       );
 
       // Create assignment data

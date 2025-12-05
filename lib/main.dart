@@ -14,6 +14,14 @@ import 'models/user_model.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'screens/instructor/instructor_course_management_screen.dart';
+import 'utils/app_theme.dart';
+import 'widgets/common/app_loading.dart';
+import 'widgets/common/app_empty_state.dart';
+import 'widgets/common/app_error_state.dart';
+import 'widgets/common/app_snackbar.dart';
+import 'widgets/common/app_drawer_header.dart';
+import 'widgets/course/course_card.dart';
+import 'screens/auth/polished_login_screen.dart';
 
 // --- MAIN ENTRY POINT ---
 Future<void> main() async {
@@ -39,26 +47,19 @@ class ELearningApp extends StatelessWidget {
     return MaterialApp(
       title: 'IT Faculty E-Learning',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
-      ),
+      theme: AppTheme.lightTheme,
       home: StreamBuilder<User?>(
         stream: AuthService().authStateChanges,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+            return Scaffold(
+              body: AppLoading.fullScreen(message: 'Đang tải...'),
             );
           }
           if (snapshot.hasData && snapshot.data != null) {
             return const HomeScreen(); // Route based on role
           } else {
-            return const LoginScreen();
+            return const PolishedLoginScreen();
           }
         },
       ),
@@ -112,8 +113,8 @@ class HomeScreen extends StatelessWidget {
       future: authService.getUserData(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            body: AppLoading.fullScreen(message: 'Đang tải thông tin...'),
           );
         }
 
@@ -162,47 +163,56 @@ class _StudentDashboardState extends State<StudentDashboard> {
         stream: _firestoreService.getStudentCoursesStream(userId, userEmail),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return AppLoading.shimmerList();
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Lỗi: ${snapshot.error}'),
+            return AppErrorState(
+              message: snapshot.error.toString(),
+              onRetry: () => setState(() {}),
             );
           }
 
           final courses = snapshot.data ?? [];
 
           if (courses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.school_outlined,
-                      size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Bạn chưa tham gia khóa học nào',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/browse');
-                    },
-                    child: const Text('Duyệt Khóa Học'),
-                  ),
-                ],
-              ),
+            return AppEmptyState(
+              icon: Icons.school_outlined,
+              title: 'Bạn chưa tham gia khóa học nào',
+              subtitle: 'Khám phá và đăng ký các khóa học mới',
+              actionLabel: 'Duyệt Khóa Học',
+              onAction: () => Navigator.pushNamed(context, '/browse'),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppTheme.spacingM),
             itemCount: courses.length,
             itemBuilder: (context, index) {
               final course = courses[index];
-              return _buildCourseCard(context, course);
+              return CourseCard(
+                course: course,
+                onTap: () {
+                  Navigator.of(context).pushNamed(
+                    '/course/${course.id}',
+                    arguments: course,
+                  );
+                },
+                trailing: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      '/course/${course.id}',
+                      arguments: course,
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  label: const Text('Vào Học'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              );
             },
           );
         },
@@ -217,97 +227,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
       child: StreamBuilder<Map<String, dynamic>?>(
         stream: _firestoreService.getUserStream(userId),
         builder: (context, snapshot) {
-          // Debug logging
-          debugPrint('Student Drawer - Connection: ${snapshot.connectionState}');
-          debugPrint('Student Drawer - Has data: ${snapshot.hasData}');
-          debugPrint('Student Drawer - Data: ${snapshot.data}');
-          
           final userData = snapshot.data;
           final email = userData?['email'] ?? 'unknown@example.com';
           final fullName = userData?['fullName'] ?? 'User';
           final avatarUrl = userData?['avatarUrl'] as String?;
-          final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-          
-          debugPrint('Student Drawer - Avatar URL: $avatarUrl');
-          debugPrint('Student Drawer - Has Avatar: $hasAvatar');
 
           return ListView(
             padding: EdgeInsets.zero,
             children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade400,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 3,
-                        ),
-                      ),
-                      child: CircleAvatar(
-                        key: ValueKey('student-avatar-$avatarUrl'),
-                        radius: 35,
-                        backgroundColor: Colors.white,
-                        child: hasAvatar
-                            ? ClipOval(
-                                child: Image.network(
-                                  avatarUrl,
-                                  width: 70,
-                                  height: 70,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 140,
-                                  cacheHeight: 140,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Text(
-                                      fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
-                                      style: const TextStyle(fontSize: 28, color: Colors.blue),
-                                    );
-                                  },
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            : Text(
-                                fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
-                                style: const TextStyle(fontSize: 28, color: Colors.blue),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      fullName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+              AppDrawerHeader(
+                fullName: fullName,
+                email: email,
+                avatarUrl: avatarUrl,
+                gradient: AppTheme.studentGradient,
               ),
               ListTile(
                 leading: const Icon(Icons.school),
@@ -343,67 +275,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  Widget _buildCourseCard(BuildContext context, Course course) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).pushNamed('/course/${course.id}', arguments: course);
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border(
-              left: BorderSide(color: course.getColor(), width: 4),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                course.name,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Giảng viên: ${course.instructorName}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                course.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Học sinh: ${course.studentIds.length}'),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pushNamed('/course/${course.id}', arguments: course);
-                    },
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Vào Học'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   void _logout() async {
     await _authService.signOut();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã đăng xuất')),
-      );
+      AppSnackbar.success(context, 'Đã đăng xuất thành công');
     }
   }
 }
@@ -445,40 +322,59 @@ class _InstructorDashboardState extends State<InstructorDashboard> {
         stream: _firestoreService.getInstructorCoursesStream(userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return AppLoading.shimmerList();
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Lỗi: ${snapshot.error}'),
+            return AppErrorState(
+              message: snapshot.error.toString(),
+              onRetry: () => setState(() {}),
             );
           }
 
           final courses = snapshot.data ?? [];
 
           if (courses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.school_outlined,
-                      size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Bạn chưa tạo khóa học nào',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
+            return AppEmptyState(
+              icon: Icons.school_outlined,
+              title: 'Bạn chưa tạo khóa học nào',
+              subtitle: 'Tạo khóa học đầu tiên của bạn',
+              actionLabel: 'Tạo Khóa Học',
+              onAction: () => Navigator.pushNamed(context, '/create-course'),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppTheme.spacingM),
             itemCount: courses.length,
             itemBuilder: (context, index) {
               final course = courses[index];
-              return _buildInstructorCourseCard(context, course);
+              return CourseCard(
+                course: course,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => InstructorCourseManagementScreen(course: course),
+                    ),
+                  );
+                },
+                trailing: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InstructorCourseManagementScreen(course: course),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings, size: 18),
+                  label: const Text('Quản Lý'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryOrange,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              );
             },
           );
         },
@@ -493,97 +389,19 @@ class _InstructorDashboardState extends State<InstructorDashboard> {
       child: StreamBuilder<Map<String, dynamic>?>(
         stream: _firestoreService.getUserStream(userId),
         builder: (context, snapshot) {
-          // Debug logging
-          debugPrint('Instructor Drawer - Connection: ${snapshot.connectionState}');
-          debugPrint('Instructor Drawer - Has data: ${snapshot.hasData}');
-          debugPrint('Instructor Drawer - Data: ${snapshot.data}');
-          
           final userData = snapshot.data;
           final email = userData?['email'] ?? 'unknown@example.com';
           final fullName = userData?['fullName'] ?? 'User';
           final avatarUrl = userData?['avatarUrl'] as String?;
-          final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-          
-          debugPrint('Instructor Drawer - Avatar URL: $avatarUrl');
-          debugPrint('Instructor Drawer - Has Avatar: $hasAvatar');
 
           return ListView(
             padding: EdgeInsets.zero,
             children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade400,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 3,
-                        ),
-                      ),
-                      child: CircleAvatar(
-                        key: ValueKey('instructor-avatar-$avatarUrl'),
-                        radius: 35,
-                        backgroundColor: Colors.white,
-                        child: hasAvatar
-                            ? ClipOval(
-                                child: Image.network(
-                                  avatarUrl,
-                                  width: 70,
-                                  height: 70,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 140,
-                                  cacheHeight: 140,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Text(
-                                      fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
-                                      style: const TextStyle(fontSize: 28, color: Colors.orange),
-                                    );
-                                  },
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            : Text(
-                                fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
-                                style: const TextStyle(fontSize: 28, color: Colors.orange),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      fullName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+              AppDrawerHeader(
+                fullName: fullName,
+                email: email,
+                avatarUrl: avatarUrl,
+                gradient: AppTheme.instructorGradient,
               ),
               ListTile(
                 leading: const Icon(Icons.school),
@@ -619,88 +437,12 @@ class _InstructorDashboardState extends State<InstructorDashboard> {
     );
   }
 
-  Widget _buildInstructorCourseCard(BuildContext context, Course course) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => InstructorCourseManagementScreen(course: course),
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border(
-              left: BorderSide(color: course.getColor(), width: 4),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          course.name,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          course.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton(
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        child: Text('Chỉnh sửa'),
-                      ),
-                      const PopupMenuItem(
-                        child: Text('Xóa'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Học sinh: ${course.studentIds.length}'),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => InstructorCourseManagementScreen(course: course)));
-                    },
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Quản Lý'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   void _logout() async {
     await _authService.signOut();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã đăng xuất')),
-      );
+      AppSnackbar.success(context, 'Đã đăng xuất thành công');
     }
   }
 }
@@ -1055,16 +797,15 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: Row(
                       children: [
-                        Radio<UserRole>(
-                          value: UserRole.student,
-                          groupValue: _selectedRole,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedRole = value;
-                              _errorMessage = null;
-                            });
-                          },
+                        Icon(
+                          _selectedRole == UserRole.student
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: _selectedRole == UserRole.student
+                              ? Colors.blue
+                              : Colors.grey,
                         ),
+                        const SizedBox(width: 8),
                         const Text('Học sinh'),
                       ],
                     ),
@@ -1093,16 +834,15 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: Row(
                       children: [
-                        Radio<UserRole>(
-                          value: UserRole.instructor,
-                          groupValue: _selectedRole,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedRole = value;
-                              _errorMessage = null;
-                            });
-                          },
+                        Icon(
+                          _selectedRole == UserRole.instructor
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: _selectedRole == UserRole.instructor
+                              ? Colors.blue
+                              : Colors.grey,
                         ),
+                        const SizedBox(width: 8),
                         const Text('Giảng viên'),
                       ],
                     ),
