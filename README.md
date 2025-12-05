@@ -147,6 +147,10 @@ dependencies:
 4. Import student lists via CSV
 5. Grade submissions and view analytics
 
+## 🌐 Live Demo
+
+**Deployed on Firebase Hosting:** [https://elearnng-v2.web.app](https://elearnng-v2.web.app)
+
 ## 📸 Screenshots
 
 *(Add screenshots here)*
