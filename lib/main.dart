@@ -23,6 +23,7 @@ import 'widgets/common/app_drawer_header.dart';
 import 'widgets/course/course_card.dart';
 import 'screens/auth/polished_login_screen.dart';
 import 'screens/student/student_analytics_screen.dart';
+import 'screens/instructor/generate_test_data_screen.dart';
 
 // --- MAIN ENTRY POINT ---
 Future<void> main() async {
@@ -428,6 +429,21 @@ class _InstructorDashboardState extends State<InstructorDashboard> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/create-course');
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.science, color: Colors.orange),
+                title: const Text('Tạo Dữ Liệu Test'),
+                subtitle: const Text('Để test Analytics', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GenerateTestDataScreen(),
+                    ),
+                  );
                 },
               ),
               const Divider(),

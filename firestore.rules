@@ -160,5 +160,80 @@ service cloud.firestore {
         );
       }
     }
+    
+    // Assignments collection (top-level for analytics)
+    match /assignments/{assignmentId} {
+      // Anyone authenticated can read (for analytics)
+      allow read: if isSignedIn();
+      
+      // Instructors can create/update/delete assignments
+      allow write: if isInstructor();
+    }
+    
+    // Quizzes collection (top-level for analytics)
+    match /quizzes/{quizId} {
+      // Anyone authenticated can read (for analytics)
+      allow read: if isSignedIn();
+      
+      // Instructors can create/update/delete quizzes
+      allow write: if isInstructor();
+    }
+    
+    // Submissions collection (for assignment submissions)
+    match /submissions/{submissionId} {
+      // Users can read their own submissions, instructors can read all
+      allow read: if isSignedIn() && (
+        resource.data.studentId == request.auth.uid ||
+        isInstructor()
+      );
+      
+      // Students can create their own submissions
+      // Instructors can create submissions (for test data generation)
+      allow create: if isSignedIn() && (
+        request.resource.data.studentId == request.auth.uid ||
+        isInstructor()
+      );
+      
+      // Instructors can update submissions (for grading)
+      // Students can update their own submissions (before grading)
+      allow update: if isSignedIn() && (
+        isInstructor() ||
+        (resource.data.studentId == request.auth.uid && resource.data.status != 'graded')
+      );
+      
+      // Only instructors can delete submissions
+      allow delete: if isInstructor();
+    }
+    
+    // Quiz Attempts collection (for quiz responses)
+    match /quizAttempts/{attemptId} {
+      // Users can read their own attempts, instructors can read all
+      allow read: if isSignedIn() && (
+        resource.data.studentId == request.auth.uid ||
+        isInstructor()
+      );
+      
+      // Students can create their own attempts
+      // Instructors can create attempts (for test data generation)
+      allow create: if isSignedIn() && (
+        request.resource.data.studentId == request.auth.uid ||
+        isInstructor()
+      );
+      
+      // Instructors can update attempts (for grading)
+      allow update: if isInstructor();
+      
+      // Only instructors can delete attempts
+      allow delete: if isInstructor();
+    }
+    
+    // Materials collection (top-level for course materials)
+    match /materials/{materialId} {
+      // Anyone authenticated can read
+      allow read: if isSignedIn();
+      
+      // Instructors can create/update/delete materials
+      allow write: if isInstructor();
+    }
   }
 }
